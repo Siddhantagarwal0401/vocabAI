@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFavourites } from '../context/FavouritesContext';
 
 export interface VocabularyItem {
@@ -30,7 +31,10 @@ const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
 
   return (
     <View style={styles.cardContainer}>
-      <View style={styles.contentOuterContainer}>
+      <LinearGradient
+        colors={['#2A2A2A', '#1E1E1E']}
+        style={styles.contentOuterContainer}
+      >
         {/* Favourite Button */}
         <TouchableOpacity onPress={toggleFavourite} style={styles.favouriteButton}>
           <Ionicons 
@@ -53,14 +57,18 @@ const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
             style={styles.wordText}
             numberOfLines={1}
             adjustsFontSizeToFit={true}
-            minimumFontScale={0.5} // Prevents font from becoming too small
+            minimumFontScale={0.5} 
           >
             {item.word}
           </Text>
           <Text style={styles.definitionText}>{item.definition}</Text>
-          {item.example && <Text style={styles.exampleText}>"{item.example}"</Text>}
+          {item.example && (
+            <>
+              <Text style={styles.exampleText}>"{item.example}"</Text>
+            </>
+          )}
         </ScrollView>
-      </View>
+      </LinearGradient>
     </View>
   );
 };
@@ -69,40 +77,48 @@ const styles = StyleSheet.create({
   cardContainer: {
     width: width,
     height: height,
-    justifyContent: 'center', // Centers the contentOuterContainer vertically
-    alignItems: 'center', // Centers the contentOuterContainer horizontally
-    backgroundColor: '#121212',
-    position: 'relative', // Needed for absolute positioning of the button
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: '#121212', 
+    position: 'relative',
   },
-  contentOuterContainer: {
+  contentOuterContainer: { 
     width: '90%',
     maxWidth: 500,
-    height: '70%', // Takes up 70% of card height, leaving space above and below
-    justifyContent: 'flex-start', // Aligns children from the top
-    alignItems: 'center', // Centers children horizontally
+    height: '70%', 
+    justifyContent: 'flex-start', 
+    alignItems: 'center',
+    borderRadius: 20, 
+    paddingVertical: 30, 
+    paddingHorizontal: 20, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   wordText: {
-    fontSize: 52,
-    fontWeight: '700',
+    fontSize: 46, 
+    fontWeight: '600', 
     textAlign: 'center',
-    marginBottom: 25,
+    marginBottom: 20, 
     color: '#EAEAEA',
-    paddingHorizontal: 20,
   },
   scrollableContentContainer: {
-    width: '100%', // Takes full width of parent container
-    flex: 1, // Takes remaining space after wordText
+    width: '100%', 
+    flex: 1, 
   },
   scrollViewContent: {
     flexGrow: 1,
-    justifyContent: 'center', // Center content vertically in scroll area
-    alignItems: 'center', // Center content horizontally
+    justifyContent: 'center', 
+    alignItems: 'center', 
     paddingBottom: 20,
   },
   definitionText: {
     fontSize: 20,
     textAlign: 'center',
-    marginBottom: 25,
+    marginTop: 20, 
+    marginBottom: 20, 
     color: '#B0B0B0',
     fontStyle: 'normal',
     lineHeight: 30,
@@ -110,16 +126,17 @@ const styles = StyleSheet.create({
   exampleText: {
     fontSize: 18,
     textAlign: 'center',
+    marginTop: 15, 
     color: '#888888',
     lineHeight: 28,
     fontStyle: 'italic',
   },
   favouriteButton: {
     position: 'absolute',
-    top: 20, // Adjust as needed for placement from top of contentOuterContainer
-    right: 20, // Adjust as needed for placement from right of contentOuterContainer
-    zIndex: 1, // Ensure it's above other elements
-    padding: 10, // Add some padding to make it easier to tap
+    top: 25, 
+    right: 25, 
+    zIndex: 1, 
+    padding: 10, 
   },
 });
 

@@ -1,21 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SwipeListView } from 'react-native-swipe-list-view';
 import { useFavourites } from '../context/FavouritesContext';
-import { VocabularyItem } from './VocabularyCard'; // Assuming VocabularyCard exports this type
+import { VocabularyItem } from './VocabularyCard';
 
-// Component to render each favourite item
-const FavouriteListItem: React.FC<{ item: VocabularyItem; onRemove: (id: string) => void }> = ({ item, onRemove }) => {
+// Component to render each favourite item (visible part)
+const FavouriteListItem: React.FC<{ item: VocabularyItem }> = ({ item }) => {
   return (
     <View style={styles.favouriteItemContainer}>
       <View style={styles.favouriteTextContainer}>
         <Text style={styles.favouriteWord}>{item.word}</Text>
         <Text style={styles.favouriteDefinition}>{item.definition}</Text>
       </View>
-      <TouchableOpacity onPress={() => onRemove(item.id)} style={styles.removeButton}>
-        <Ionicons name="trash-bin-outline" size={24} color="#FF6B6B" />
-      </TouchableOpacity>
     </View>
   );
 };
@@ -23,6 +21,25 @@ const FavouriteListItem: React.FC<{ item: VocabularyItem; onRemove: (id: string)
 export default function FavouritesScreen() {
   const { favourites, removeFavourite } = useFavourites();
   const insets = useSafeAreaInsets();
+
+  const renderItem = (data: { item: VocabularyItem }) => (
+    <FavouriteListItem item={data.item} />
+  );
+
+  const renderHiddenItem = (data: { item: VocabularyItem }, rowMap: any) => (
+    <View style={styles.rowBack}>
+      <TouchableOpacity
+        style={[styles.backRightBtn, styles.backRightBtnRight]}
+        onPress={() => {
+          removeFavourite(data.item.id);
+          rowMap[data.item.id]?.closeRow(); // Close the row after deleting
+        }}
+      >
+        <Ionicons name="trash-bin-sharp" size={28} color="#FFF" style={styles.trashIcon} />
+        <Text style={styles.backTextWhite}>Delete</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   if (favourites.length === 0) {
     return (
@@ -42,11 +59,20 @@ export default function FavouritesScreen() {
       <StatusBar barStyle="light-content" />
       <View style={[styles.containerList, { paddingTop: insets.top + 20 }]}>
         <Text style={styles.headerText}>Your Favourites</Text>
-        <FlatList
+        <SwipeListView
           data={favourites}
-          renderItem={({ item }) => <FavouriteListItem item={item} onRemove={removeFavourite} />}
+          renderItem={renderItem}
+          renderHiddenItem={renderHiddenItem}
+          rightOpenValue={-100} // How much the row opens to the right (revealing left-side button)
+          previewRowKey={'0'} // Optional: Animate a row on first load
+          previewOpenValue={-40}
+          previewOpenDelay={3000}
+          disableRightSwipe // Can be true if you only want left swipes
           keyExtractor={(item) => item.id}
           style={styles.list}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+          useNativeDriver={false} // Recommended for SwipeListView
         />
       </View>
     </SafeAreaView>
@@ -68,10 +94,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerText: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '600',
     color: '#EAEAEA',
-    marginBottom: 20,
+    marginBottom: 25,
     textAlign: 'center',
   },
   list: {
@@ -80,47 +106,80 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 22,
     fontWeight: '600',
-    color: '#EAEAEA',
-    marginTop: 20,
-    marginBottom: 8,
+    color: '#E0E0E0',
+    marginTop: 25,
+    marginBottom: 10,
   },
   emptySubText: {
     fontSize: 16,
-    color: '#B0B0B0',
+    color: '#A0A0A0',
     textAlign: 'center',
     paddingHorizontal: 30,
+    lineHeight: 24,
   },
   favouriteItemContainer: {
-    backgroundColor: '#2A2A2A',
-    borderRadius: 10,
-    padding: 15,
-    marginVertical: 8,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 15,
+    padding: 20,
+    marginVertical: 10,
     marginHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 1,
   },
   favouriteTextContainer: {
-    flex: 1, // Allows text to take available space before button
-    marginRight: 10, // Space before the remove button
+    flex: 1,
+    marginRight: 0,
   },
   favouriteWord: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#EAEAEA',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   favouriteDefinition: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#B0B0B0',
-    lineHeight: 20,
+    lineHeight: 22,
   },
-  removeButton: {
-    padding: 8, // Make tap area larger
+  rowBack: {
+    alignItems: 'center',
+    backgroundColor: '#121212',
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingLeft: 15,
+    marginVertical: 10,
+    marginHorizontal: 16,
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  backRightBtn: {
+    alignItems: 'center',
+    bottom: 0,
+    justifyContent: 'center',
+    position: 'absolute',
+    top: 0,
+    width: 100,
+  },
+  backRightBtnRight: {
+    backgroundColor: '#D9534F',
+    right: 0,
+    borderTopRightRadius: 15,
+    borderBottomRightRadius: 15,
+  },
+  trashIcon: {
+    marginBottom: 5,
+  },
+  backTextWhite: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
