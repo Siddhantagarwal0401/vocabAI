@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useFavourites } from '../context/FavouritesContext';
 
 export interface VocabularyItem {
   id: string;
@@ -15,10 +17,29 @@ interface VocabularyCardProps {
 const { height, width } = Dimensions.get('window');
 
 const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
+  const { addFavourite, removeFavourite, isFavourite } = useFavourites();
+  const isFav = isFavourite(item.id);
+
+  const toggleFavourite = () => {
+    if (isFav) {
+      removeFavourite(item.id);
+    } else {
+      addFavourite(item);
+    }
+  };
+
   return (
     <View style={styles.cardContainer}>
-      {/* Wrap both word and ScrollView in a container View */}
       <View style={styles.contentOuterContainer}>
+        {/* Favourite Button */}
+        <TouchableOpacity onPress={toggleFavourite} style={styles.favouriteButton}>
+          <Ionicons 
+            name={isFav ? "heart" : "heart-outline"} 
+            size={32} 
+            color={isFav ? "#FF6B6B" : "#EAEAEA"} 
+          />
+        </TouchableOpacity>
+
         {/* Word at the top of the content block */}
         
         
@@ -51,6 +72,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', // Centers the contentOuterContainer vertically
     alignItems: 'center', // Centers the contentOuterContainer horizontally
     backgroundColor: '#121212',
+    position: 'relative', // Needed for absolute positioning of the button
   },
   contentOuterContainer: {
     width: '90%',
@@ -91,6 +113,13 @@ const styles = StyleSheet.create({
     color: '#888888',
     lineHeight: 28,
     fontStyle: 'italic',
+  },
+  favouriteButton: {
+    position: 'absolute',
+    top: 20, // Adjust as needed for placement from top of contentOuterContainer
+    right: 20, // Adjust as needed for placement from right of contentOuterContainer
+    zIndex: 1, // Ensure it's above other elements
+    padding: 10, // Add some padding to make it easier to tap
   },
 });
 
