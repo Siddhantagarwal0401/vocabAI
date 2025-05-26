@@ -47,6 +47,15 @@ export default function AppLayout() {
             ),
           }}
         />
+        <Tabs.Screen
+          name="quiz"
+          options={{
+            title: 'Quiz',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? "school" : "school-outline"} size={28} color={color} />
+            ),
+          }}
+        />
       </Tabs>
     </FavouritesProvider>
   );

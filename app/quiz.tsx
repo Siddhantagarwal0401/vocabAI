@@ -1,0 +1,394 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useFavourites } from '../context/FavouritesContext';
+import { VocabularyItem } from './VocabularyCard';
+import generalWordListJson from '../assets/word_list.json';
+
+const generalWordList: string[] = generalWordListJson as string[];
+
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+const NUM_CHOICES = 4;
+
+export default function QuizScreen() {
+  const insets = useSafeAreaInsets();
+  const { favourites } = useFavourites();
+
+  const [quizWords, setQuizWords] = useState<VocabularyItem[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentChoices, setCurrentChoices] = useState<string[]>([]);
+  const [quizActive, setQuizActive] = useState(false);
+  
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  const [answerStatus, setAnswerStatus] = useState<'correct' | 'incorrect' | null>(null);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [score, setScore] = useState(0);
+
+  const generateChoices = (correctItem: VocabularyItem): string[] => {
+    const correctWord = correctItem.word;
+    let distractors: string[] = [];
+
+    const potentialDistractors = generalWordList.filter(word => word.toLowerCase() !== correctWord.toLowerCase());
+    const shuffledPotentialDistractors = shuffleArray(potentialDistractors);
+
+    for (let i = 0; i < NUM_CHOICES - 1 && i < shuffledPotentialDistractors.length; i++) {
+      distractors.push(shuffledPotentialDistractors[i]);
+    }
+
+    const needed = NUM_CHOICES - 1 - distractors.length;
+    if (needed > 0) {
+      for (let i = 0; i < needed; i++) {
+        let placeholder = `Option ${i + distractors.length + 2}`;
+        while (placeholder.toLowerCase() === correctWord.toLowerCase() || distractors.includes(placeholder)) {
+            placeholder += '_alt'; 
+        }
+        distractors.push(placeholder);
+      }
+    }
+
+    return shuffleArray([correctWord, ...distractors]);
+  };
+
+  const resetQuestionState = () => {
+    setSelectedChoice(null);
+    setAnswerStatus(null);
+    setIsAnswered(false);
+  };
+
+  const loadQuestion = (index: number, words: VocabularyItem[]) => {
+    resetQuestionState();
+    if (index < words.length) {
+      const correctItem = words[index];
+      setCurrentChoices(generateChoices(correctItem));
+      setCurrentQuestionIndex(index);
+    } else {
+      setQuizActive(false);
+      Alert.alert(
+        "Quiz Finished!", 
+        `Your score: ${score} / ${quizWords.length}`,
+        [{ text: "OK", onPress: () => { setScore(0); } }]
+      );
+    }
+  };
+
+  const startQuiz = () => {
+    if (favourites.length === 0) {
+        Alert.alert("No Favourites", "Please add some words to your favourites to start a quiz.");
+        return;
+    }
+    if (favourites.length < 2 && NUM_CHOICES > 1) {
+        Alert.alert("Not Enough Words", `You need at least ${Math.max(2, NUM_CHOICES)} different words in favourites for a meaningful quiz with ${NUM_CHOICES} choices. You have ${favourites.length}.`);
+        return;
+    }
+
+    setScore(0);
+    const shuffledQuizWords = shuffleArray(favourites);
+    setQuizWords(shuffledQuizWords);
+    loadQuestion(0, shuffledQuizWords);
+    setQuizActive(true);
+  };
+
+  const handleSelectChoice = (selectedWord: string) => {
+    if (isAnswered) return;
+
+    setIsAnswered(true);
+    setSelectedChoice(selectedWord);
+    const correctWord = quizWords[currentQuestionIndex]?.word;
+
+    if (selectedWord === correctWord) {
+      setAnswerStatus('correct');
+      setScore(prevScore => prevScore + 1);
+    } else {
+      setAnswerStatus('incorrect');
+    }
+  };
+
+  const proceedToNextQuestion = () => {
+    loadQuestion(currentQuestionIndex + 1, quizWords);
+  };
+
+  const getChoiceButtonStyle = (choice: string) => {
+    if (!isAnswered) {
+      return styles.choiceButton;
+    }
+    const isCorrectAnswer = choice === quizWords[currentQuestionIndex]?.word;
+    const isSelected = choice === selectedChoice;
+
+    if (isCorrectAnswer) {
+      return [styles.choiceButton, styles.correctChoice];
+    }
+    if (isSelected && answerStatus === 'incorrect') {
+      return [styles.choiceButton, styles.incorrectChoice];
+    }
+    return [styles.choiceButton, styles.disabledChoice];
+  };
+
+  // Pre-Quiz View
+  if (!quizActive) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor={styles.safeArea.backgroundColor} />
+        <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center' }]}>
+          <Ionicons name="school-outline" size={90} color="#555" style={styles.preQuizIcon} />
+          <Text style={styles.headerText}>Quiz Challenge</Text>
+          {favourites.length > 0 ? (
+            <>
+              <Text style={styles.subText}>
+                Test your vocabulary on {favourites.length} favourited word{favourites.length === 1 ? '' : 's'}.
+              </Text>
+              <TouchableOpacity style={styles.startButton} onPress={startQuiz}>
+                <Ionicons name="play-outline" size={22} color="#FFFFFF" style={{marginRight: 8}}/>
+                <Text style={styles.startButtonText}>Start Quiz</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.subText}>
+              Add words to Favourites to start a quiz.
+            </Text>
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Active Quiz View
+  const currentWordItem = quizWords[currentQuestionIndex];
+  if (!currentWordItem) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+         <StatusBar barStyle="light-content" backgroundColor={styles.safeArea.backgroundColor} />
+        <View style={[styles.container, {justifyContent: 'center'}]}><Text style={styles.subText}>Loading question...</Text></View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor={styles.safeArea.backgroundColor} />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.quizTopArea}>
+            <Text style={styles.progressText}>
+            Word {currentQuestionIndex + 1} / {quizWords.length}
+            </Text>
+            <Text style={styles.scoreText}>Score: {score}</Text>
+        </View>
+        
+        <View style={styles.quizContentArea}> 
+            <View style={styles.questionContainer}>
+            <Text style={styles.definitionHintText}>DEFINITION</Text>
+            <Text style={styles.definitionText}>{currentWordItem.definition}</Text>
+            </View>
+
+            <View style={styles.choicesContainer}>
+            {currentChoices.map((choice, index) => (
+                <TouchableOpacity 
+                key={index} 
+                style={getChoiceButtonStyle(choice)}
+                onPress={() => handleSelectChoice(choice)}
+                disabled={isAnswered}
+                >
+                <Text style={styles.choiceText}>{choice}</Text>
+                </TouchableOpacity>
+            ))}
+            </View>
+        </View>
+
+        <View style={styles.quizBottomArea}> 
+            {isAnswered && (
+            <TouchableOpacity style={styles.nextButton} onPress={proceedToNextQuestion}>
+                <Text style={styles.nextButtonText}>
+                {currentQuestionIndex === quizWords.length - 1 ? 'Finish Quiz' : 'Next Question'}
+                </Text>
+                <Ionicons name="arrow-forward-outline" size={22} color="#FFFFFF" style={{marginLeft: 8}}/>
+            </TouchableOpacity>
+            )}
+            {!isAnswered && <View style={styles.nextButtonPlaceholder} />}
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#121212', 
+  },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  preQuizIcon: {
+    marginBottom: 25,
+  },
+  headerText: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#EAEAEA',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  subText: {
+    fontSize: 16,
+    color: '#AAAAAA',
+    textAlign: 'center',
+    marginBottom: 35,
+    paddingHorizontal: 15,
+    lineHeight: 23,
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF', 
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 12, 
+    minWidth: '60%',
+    elevation: 5,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  startButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  quizTopArea: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10, 
+    position: 'absolute', 
+    top: 0, 
+    left: 20, 
+    right: 20, 
+    zIndex: 1, 
+  },
+  quizContentArea: { 
+    flex: 1, 
+    width: '100%',
+    justifyContent: 'center', 
+    alignItems: 'center',
+    paddingTop: 60, 
+    paddingBottom: 70, 
+  },
+  quizBottomArea: { 
+    width: '100%',
+    position: 'absolute',
+    bottom: 10, 
+    left: 20,
+    right: 20,
+    alignItems: 'center', 
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#AAAAAA',
+    fontWeight: '500',
+  },
+  scoreText: {
+    fontSize: 14,
+    color: '#AAAAAA',
+    fontWeight: '500',
+  },
+  questionContainer: {
+    backgroundColor: '#1E1E1E', 
+    borderRadius: 15, 
+    padding: 20,
+    width: '100%',
+    marginBottom: 25,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333333', 
+  },
+  definitionHintText: {
+    fontSize: 12,
+    color: '#888888',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  definitionText: {
+    fontSize: 18,
+    color: '#EAEAEA',
+    textAlign: 'center',
+    lineHeight: 26,
+    fontWeight: '500',
+  },
+  choicesContainer: {
+    width: '100%',
+  },
+  choiceButton: {
+    backgroundColor: '#2C2C2C', 
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#444444',
+    minHeight: 55,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  choiceText: {
+    color: '#E0E0E0',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  correctChoice: {
+    backgroundColor: '#28A745', 
+    borderColor: '#1E7E34',     
+  },
+  incorrectChoice: {
+    backgroundColor: '#DC3545', 
+    borderColor: '#B02A37',     
+  },
+  disabledChoice: {
+    backgroundColor: '#2C2C2C', 
+    opacity: 0.5, 
+    borderColor: '#444444',
+  },
+  nextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF', 
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    minWidth: '70%', 
+    elevation: 5,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  nextButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  nextButtonPlaceholder: { 
+    minHeight: 50, 
+  },
+  placeholderText: { 
+    fontSize: 16,
+    color: '#888888',
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+});
