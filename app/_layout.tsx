@@ -10,33 +10,33 @@ export default function AppLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#FFFFFF', // Pure white for active icon
-        tabBarInactiveTintColor: '#9E9E9E', // Softer grey for inactive icon
-        tabBarShowLabel: false, // Icon-only tab bar
+        tabBarActiveTintColor: '#FFFFFF', // Active icon color (white)
+        tabBarInactiveTintColor: '#B0B0B0', // Inactive icon color (lighter grey)
+        tabBarShowLabel: false, // Still icon-only
         tabBarStyle: {
-          backgroundColor: '#212121', // Dark background
-          borderTopWidth: 0, // No top border
+          backgroundColor: '#2A2A2A', // A slightly lighter dark shade for the bar
+          borderTopWidth: 0,
           paddingBottom: insets.bottom, // Apply bottom safe area padding
-          paddingTop: 5, // Adjusted for icon-only centering
-          height: 55 + insets.bottom, // Slightly more compact height for icon-only
+          height: 58 + insets.bottom, // Adjusted height
+          // Shadow for a subtle lift
           shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: -3, // Slightly more pronounced shadow
-          },
-          shadowOpacity: 0.12,
-          shadowRadius: 4.0,
-          elevation: 8, // For Android shadow
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 3.5,
+          elevation: 7,
         },
         headerShown: false,
-        // tabBarLabelStyle is not needed if tabBarShowLabel is false
       }}
     >
       <Tabs.Screen
         name="learn"
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <MaterialIcons name="school" color={color} size={focused ? 30 : 26} /> // More distinct size difference
+            <MaterialIcons 
+              name={focused ? "school" : "school"} // MaterialIcons 'school' is usually filled. If an outline variant existed, we'd use it for !focused.
+              color={color} 
+              size={28} // Consistent size, active state handled by color and potentially filled/outline
+            />
           ),
         }}
       />
@@ -44,12 +44,14 @@ export default function AppLayout() {
         name="favourites"
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <MaterialIcons name="favorite" color={color} size={focused ? 30 : 26} /> // More distinct size difference
+            <MaterialIcons 
+              name={focused ? "favorite" : "favorite-border"} // Using filled for active, outline for inactive
+              color={color} 
+              size={28} // Consistent size
+            />
           ),
         }}
       />
-      {/* The index route is no longer needed here as tabs define the initial routes */}
-      {/* <Stack.Screen name="index" options={{ headerShown: false }} /> */}
     </Tabs>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 
 export interface VocabularyItem {
   id: string;
@@ -17,10 +17,21 @@ const { height, width } = Dimensions.get('window');
 const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
   return (
     <View style={styles.cardContainer}>
-      <View style={styles.contentContainer}>
-        <Text style={styles.wordText}>{item.word}</Text>
-        <Text style={styles.definitionText}>{item.definition}</Text>
-        <Text style={styles.exampleText}>"{item.example}"</Text>
+      {/* Wrap both word and ScrollView in a container View */}
+      <View style={styles.contentOuterContainer}>
+        {/* Word at the top of the content block */}
+        
+        
+        {/* ScrollView for definition and example */}
+        <ScrollView 
+          style={styles.scrollableContentContainer}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.wordText}>{item.word}</Text>
+          <Text style={styles.definitionText}>{item.definition}</Text>
+          <Text style={styles.exampleText}>"{item.example}"</Text>
+        </ScrollView>
       </View>
     </View>
   );
@@ -28,41 +39,51 @@ const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    width: width, // Full screen width
-    height: height, // Full screen height
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#121212', // Dark background for the card
+    width: width,
+    height: height,
+    justifyContent: 'center', // Centers the contentOuterContainer vertically
+    alignItems: 'center', // Centers the contentOuterContainer horizontally
+    backgroundColor: '#121212',
   },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '90%', // Content takes 90% of width for some side padding
-    maxWidth: 500, // Max width for very large screens
-    paddingHorizontal: 20,
+  contentOuterContainer: {
+    width: '90%',
+    maxWidth: 500,
+    height: '70%', // Takes up 70% of card height, leaving space above and below
+    justifyContent: 'flex-start', // Aligns children from the top
+    alignItems: 'center', // Centers children horizontally
   },
   wordText: {
-    fontSize: 52, // Slightly larger
-    fontWeight: '700', // Bolder
+    fontSize: 52,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 35, // Increased margin
-    color: '#EAEAEA', // Light color for word text
+    marginBottom: 25,
+    color: '#EAEAEA',
+    paddingHorizontal: 20,
+  },
+  scrollableContentContainer: {
+    width: '100%', // Takes full width of parent container
+    flex: 1, // Takes remaining space after wordText
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    justifyContent: 'center', // Center content vertically in scroll area
+    alignItems: 'center', // Center content horizontally
+    paddingBottom: 20,
   },
   definitionText: {
     fontSize: 20,
     textAlign: 'center',
     marginBottom: 25,
-    color: '#B0B0B0', // Medium light color for definition
-    fontStyle: 'normal', // Removing italic for a cleaner look, can be re-added if preferred
-    lineHeight: 30, // Improved readability
+    color: '#B0B0B0',
+    fontStyle: 'normal',
+    lineHeight: 30,
   },
   exampleText: {
     fontSize: 18,
     textAlign: 'center',
-    color: '#888888', // Softer light color for example
-    lineHeight: 28, // Improved readability
-    fontStyle: 'italic', // Keep italic for example to differentiate
+    color: '#888888',
+    lineHeight: 28,
+    fontStyle: 'italic',
   },
 });
 
