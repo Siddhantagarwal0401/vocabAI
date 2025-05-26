@@ -20,11 +20,12 @@ export default function AppLayout() {
             borderTopWidth: 0,
             paddingBottom: insets.bottom, 
             height: 58 + insets.bottom, 
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.15,
-            shadowRadius: 3.5,
-            elevation: 7,
+            // Refined shadow for a sleeker look
+            shadowColor: '#000000', // Explicitly black for shadow
+            shadowOffset: { width: 0, height: -1 }, // Softer, less pronounced offset
+            shadowOpacity: 0.10, // Reduced opacity
+            shadowRadius: 3.0, // Slightly softer radius
+            elevation: 5, // Adjusted elevation for Android
           },
           headerShown: false, 
         }}
