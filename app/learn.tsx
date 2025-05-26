@@ -1,87 +1,117 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Text, View, FlatList, StyleSheet, Dimensions, SafeAreaView, StatusBar, ActivityIndicator } from "react-native";
 import { VocabularyCard, type VocabularyItem } from './VocabularyCard';
 
 const { height } = Dimensions.get('window');
-
-// Words to fetch from the API
-const wordsToFetch = ["ephemeral", "ubiquitous", "serendipity", "mellifluous", "eloquent"];
+const BATCH_SIZE = 7; // Number of words to fetch details for at a time
 
 export default function LearnScreen() {
-  const [words, setWords] = useState<VocabularyItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [displayedWords, setDisplayedWords] = useState<VocabularyItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // For initial load
+  const [isLoadingMore, setIsLoadingMore] = useState(false); // For subsequent loads
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchVocabularyData = async () => {
-      setLoading(true);
-      setError(null);
+  const fetchWordDetails = useCallback(async (wordsToFetch: string[]): Promise<VocabularyItem[]> => {
+    const promises = wordsToFetch.map(async (wordStr) => {
       try {
-        const fetchedWordsData: VocabularyItem[] = [];
-        
-        // Helper function to fetch and process a single word
-        const fetchWord = async (word: string): Promise<VocabularyItem | null> => {
-          try {
-            const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-            if (!response.ok) {
-              // If response is not OK, but not a network error, log and skip
-              console.warn(`API error for ${word}: ${response.status}`);
-              return null;
-            }
-            const data = await response.json();
-            
-            if (data && data.length > 0) {
-              const firstEntry = data[0];
-              const firstMeaning = firstEntry.meanings?.[0];
-              const firstDefinition = firstMeaning?.definitions?.[0];
-
-              return {
-                id: word, // Use the word itself as ID
-                word: firstEntry.word,
-                definition: firstDefinition?.definition || 'No definition found.',
-                example: firstDefinition?.example || 'No example sentence available.',
-              };
-            }
-            return null; // No data or unexpected structure
-          } catch (err) {
-            // Network errors or JSON parsing errors
-            console.error(`Failed to fetch data for ${word}:`, err);
-            return null; // Return null if a single word fetch fails
-          }
-        };
-
-        const promises = wordsToFetch.map(word => fetchWord(word));
-        const results = await Promise.all(promises);
-
-        // Filter out any null results (due to errors for specific words)
-        const validResults = results.filter(item => item !== null) as VocabularyItem[];
-        setWords(validResults);
-
+        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${wordStr}`);
+        if (!response.ok) {
+          console.warn(`API error for ${wordStr} (DictionaryAPI): ${response.status}`);
+          return null; 
+        }
+        const data = await response.json();
+        if (data && data.length > 0 && data[0].word) { 
+          const firstEntry = data[0];
+          const firstMeaning = firstEntry.meanings?.[0];
+          const firstDefinition = firstMeaning?.definitions?.[0];
+          return {
+            id: firstEntry.word, 
+            word: firstEntry.word,
+            definition: firstDefinition?.definition || 'No definition found.',
+            example: firstDefinition?.example || 'No example sentence available.',
+          };
+        }
+        console.warn(`No valid data structure for ${wordStr} from DictionaryAPI`);
+        return null;
       } catch (err) {
-        // This catch is for errors in Promise.all or other general errors
-        console.error("Failed to load vocabulary data from API:", err);
-        setError('Failed to load vocabulary. Please try again later.');
+        console.error(`Failed to fetch data for ${wordStr} (DictionaryAPI):`, err);
+        return null;
       }
-      setLoading(false);
-    };
-
-    fetchVocabularyData();
+    });
+    const results = await Promise.all(promises);
+    return results.filter(item => item !== null) as VocabularyItem[];
   }, []);
+
+  const loadMoreWords = useCallback(async () => {
+    if (isLoadingMore) return; 
+
+    setIsLoadingMore(true);
+    setError(null); 
+
+    try {
+      const randomWordStringsResponse = await fetch(`https://random-word-api.herokuapp.com/word?number=${BATCH_SIZE}`);
+      if (!randomWordStringsResponse.ok) {
+        throw new Error(`Failed to fetch random words (RandomWordAPI): ${randomWordStringsResponse.status}`);
+      }
+      const randomWordStrings = await randomWordStringsResponse.json();
+
+      if (!randomWordStrings || randomWordStrings.length === 0) {
+        console.warn("Random word API returned no words or an unexpected format.");
+        setIsLoadingMore(false);
+        return;
+      }
+
+      const newVocabularyItems = await fetchWordDetails(randomWordStrings);
+      
+      const uniqueNewItems = newVocabularyItems.filter(newItem => 
+        newItem && !displayedWords.some(existingItem => existingItem.id === newItem.id)
+      );
+
+      if (uniqueNewItems.length > 0) {
+        setDisplayedWords(prevWords => [...prevWords, ...uniqueNewItems]);
+      } else if (newVocabularyItems.length > 0) {
+        console.log("Fetched new words, but they were all duplicates or invalid after definition lookup.");
+      }
+
+    } catch (e) {
+      console.error("Error loading more words:", e);
+      setError(e instanceof Error ? e.message : "An unknown error occurred while fetching new words.");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, fetchWordDetails, displayedWords]); 
+
+  useEffect(() => {
+    if (displayedWords.length === 0 && !isLoadingMore) { 
+      setIsLoading(true); 
+      loadMoreWords().finally(() => setIsLoading(false));
+    }
+  }, []); 
+
 
   const renderItem = ({ item }: { item: VocabularyItem }) => (
     <VocabularyCard item={item} />
   );
 
-  if (loading) {
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.footerLoadingContainer}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
+      </View>
+    );
+  };
+
+  if (isLoading && displayedWords.length === 0) { 
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FFFFFF" />
-        <Text style={styles.loadingText}>Fetching Words...</Text>
+        <Text style={styles.loadingText}>Loading Vocabulary...</Text>
       </SafeAreaView>
     );
   }
 
-  if (error) {
+  if (error && displayedWords.length === 0) { 
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <Text style={styles.errorText}>{error}</Text>
@@ -89,10 +119,10 @@ export default function LearnScreen() {
     );
   }
 
-  if (!words.length) {
+  if (displayedWords.length === 0 && !isLoading && !isLoadingMore) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>No words loaded. Check your connection or try again.</Text>
+        <Text style={styles.loadingText}>No words found. Check your connection or try again.</Text>
       </SafeAreaView>
     );
   }
@@ -101,15 +131,18 @@ export default function LearnScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <FlatList
-        data={words}
+        data={displayedWords}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id + Math.random()} 
         pagingEnabled
         showsVerticalScrollIndicator={false}
         snapToAlignment={'start'}
         decelerationRate={'fast'}
         snapToInterval={height}
         style={styles.flatList}
+        onEndReached={loadMoreWords}
+        onEndReachedThreshold={0.5} 
+        ListFooterComponent={renderFooter}
       />
     </SafeAreaView>
   );
@@ -128,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#121212',
-    paddingHorizontal: 20, // Added padding for error messages
+    paddingHorizontal: 20,
   },
   loadingText: {
     marginTop: 10,
@@ -138,7 +171,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#FF6B6B', // A reddish color for errors
+    color: '#FF6B6B',
     textAlign: 'center',
+  },
+  footerLoadingContainer: {
+    height: height, 
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
