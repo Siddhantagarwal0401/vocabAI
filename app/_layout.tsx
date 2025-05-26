@@ -12,11 +12,11 @@ export default function AppLayout() {
     <FavouritesProvider>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#FFFFFF', 
-          tabBarInactiveTintColor: '#B0B0B0', 
+          tabBarActiveTintColor: '#FFA001', 
+          tabBarInactiveTintColor: '#CCCCCC', 
           tabBarShowLabel: false, 
           tabBarStyle: {
-            backgroundColor: '#2A2A2A', 
+            backgroundColor: '#1C1C1E', 
             borderTopWidth: 0,
             paddingBottom: insets.bottom, 
             height: 58 + insets.bottom, 
@@ -53,6 +53,15 @@ export default function AppLayout() {
             title: 'Quiz',
             tabBarIcon: ({ color, focused }) => (
               <Ionicons name={focused ? "school" : "school-outline"} size={28} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="analytics"
+          options={{
+            title: 'Analytics',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={28} color={color} />
             ),
           }}
         />

@@ -2,9 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Alert, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFavourites } from '../context/FavouritesContext';
 import { VocabularyItem } from './VocabularyCard';
 import generalWordListJson from '../assets/word_list.json';
+
+interface QuizAttempt {
+  id: string;
+  date: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+}
+const ANALYTICS_STORAGE_KEY = 'quizAnalyticsData';
 
 const generalWordList: string[] = generalWordListJson as string[];
 
@@ -75,11 +85,11 @@ export default function QuizScreen() {
       setCurrentChoices(generateChoices(correctItem));
       setCurrentQuestionIndex(index);
     } else {
-      setQuizActive(false);
+      saveQuizAttempt();
       Alert.alert(
         "Quiz Finished!", 
         `Your score: ${score} / ${quizWords.length}`,
-        [{ text: "OK", onPress: () => { setScore(0); } }]
+        [{ text: "OK", onPress: () => resetQuiz() }]
       );
     }
   };
@@ -159,6 +169,45 @@ export default function QuizScreen() {
       }
     }
     return [styles.choiceText];
+  };
+
+  const saveQuizAttempt = async () => {
+    if (quizWords.length === 0) return; 
+
+    const attempt: QuizAttempt = {
+      id: new Date().toISOString(), 
+      date: new Date().toISOString(),
+      score: score,
+      totalQuestions: quizWords.length,
+      percentage: (score / quizWords.length) * 100,
+    };
+
+    try {
+      const existingAttemptsJson = await AsyncStorage.getItem(ANALYTICS_STORAGE_KEY);
+      let existingAttempts: QuizAttempt[] = [];
+      if (existingAttemptsJson) {
+        existingAttempts = JSON.parse(existingAttemptsJson);
+      }
+      existingAttempts.push(attempt);
+      await AsyncStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(existingAttempts));
+      console.log('Quiz attempt saved:', attempt);
+    } catch (error) {
+      console.error('Failed to save quiz attempt:', error);
+      Alert.alert('Error', 'Could not save your quiz results.');
+    }
+  };
+
+  const resetQuiz = () => {
+    setQuizWords([]);
+    setCurrentQuestionIndex(0);
+    setCurrentQuestion(null);
+    setCurrentChoices([]);
+    setSelectedChoice(null);
+    setIsAnswered(false);
+    setScore(0);
+    setQuizActive(false);
+    nextButtonOpacity.setValue(0);
+    setRevealedCorrectChoiceWord(null);
   };
 
   if (!quizActive) {
@@ -438,5 +487,3 @@ const styles = StyleSheet.create({
     elevation: 4, // for Android
   },
 });
-
-// export default QuizScreen;
