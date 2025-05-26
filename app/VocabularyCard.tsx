@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     height: height, // Full screen height
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF', // Pure white background for the entire card view
+    backgroundColor: '#121212', // Dark background for the card
   },
   contentContainer: {
     flex: 1,
@@ -47,23 +47,23 @@ const styles = StyleSheet.create({
     fontWeight: '700', // Bolder
     textAlign: 'center',
     marginBottom: 35, // Increased margin
-    color: '#1A1A1A', // Very dark grey, almost black for strong presence
+    color: '#EAEAEA', // Light color for word text
   },
   definitionText: {
     fontSize: 20,
     textAlign: 'center',
     marginBottom: 25,
-    color: '#4A4A4A', // Medium-dark grey for definition
+    color: '#B0B0B0', // Medium light color for definition
     fontStyle: 'normal', // Removing italic for a cleaner look, can be re-added if preferred
     lineHeight: 30, // Improved readability
   },
   exampleText: {
     fontSize: 18,
     textAlign: 'center',
-    color: '#7B7B7B', // Lighter grey for example sentence
+    color: '#888888', // Softer light color for example
     lineHeight: 28, // Improved readability
     fontStyle: 'italic', // Keep italic for example to differentiate
   },
 });
 
-export default VocabularyCard;
+export { VocabularyCard };

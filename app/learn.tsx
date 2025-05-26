@@ -1,5 +1,5 @@
 import { Text, View, FlatList, StyleSheet, Dimensions, SafeAreaView, StatusBar } from "react-native";
-import VocabularyCard, { VocabularyItem } from './VocabularyCard'; // Import the card and its type
+import { VocabularyCard, type VocabularyItem } from './VocabularyCard'; // Import the card and its type
 
 // Sample Vocabulary Data
 const vocabularyData: VocabularyItem[] = [
@@ -37,14 +37,14 @@ const vocabularyData: VocabularyItem[] = [
 
 const { height } = Dimensions.get('window');
 
-export default function Index() {
+export default function LearnScreen() { // Renamed function to LearnScreen
   const renderItem = ({ item }: { item: VocabularyItem }) => (
     <VocabularyCard item={item} />
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" />
       <FlatList
         data={vocabularyData}
         renderItem={renderItem}
@@ -63,7 +63,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff', // Or a common background for all cards if VocabularyCard doesn't have one
+    backgroundColor: '#121212', // Match card background for seamless dark theme
   },
   flatList: {
     flex: 1,
