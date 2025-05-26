@@ -35,7 +35,7 @@ export default function FavouritesScreen() {
           rowMap[data.item.id]?.closeRow(); // Close the row after deleting
         }}
       >
-        <Ionicons name="trash-bin-sharp" size={28} color="#FFF" style={styles.trashIcon} />
+        <Ionicons name="trash-outline" size={28} color="#FFF" style={styles.trashIcon} />
         <Text style={styles.backTextWhite}>Delete</Text>
       </TouchableOpacity>
     </View>

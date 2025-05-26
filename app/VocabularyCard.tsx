@@ -32,7 +32,7 @@ const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
   return (
     <View style={styles.cardContainer}>
       <LinearGradient
-        colors={['#2A2A2A', '#1E1E1E']}
+        colors={['#2A2A2A', '#1C1C1C']}
         style={styles.contentOuterContainer}
       >
         {/* Favourite Button */}
