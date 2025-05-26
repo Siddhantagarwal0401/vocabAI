@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Alert, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavourites } from '../context/FavouritesContext';
@@ -25,13 +25,15 @@ export default function QuizScreen() {
 
   const [quizWords, setQuizWords] = useState<VocabularyItem[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState<VocabularyItem | null>(null);
   const [currentChoices, setCurrentChoices] = useState<string[]>([]);
-  const [quizActive, setQuizActive] = useState(false);
-  
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
-  const [answerStatus, setAnswerStatus] = useState<'correct' | 'incorrect' | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState(0);
+  const [quizActive, setQuizActive] = useState(false);
+
+  const nextButtonOpacity = useRef(new Animated.Value(0)).current;
+  const [revealedCorrectChoiceWord, setRevealedCorrectChoiceWord] = useState<string | null>(null);
 
   const generateChoices = (correctItem: VocabularyItem): string[] => {
     const correctWord = correctItem.word;
@@ -60,14 +62,16 @@ export default function QuizScreen() {
 
   const resetQuestionState = () => {
     setSelectedChoice(null);
-    setAnswerStatus(null);
     setIsAnswered(false);
+    setRevealedCorrectChoiceWord(null);
+    nextButtonOpacity.setValue(0);
   };
 
   const loadQuestion = (index: number, words: VocabularyItem[]) => {
     resetQuestionState();
     if (index < words.length) {
       const correctItem = words[index];
+      setCurrentQuestion(correctItem);
       setCurrentChoices(generateChoices(correctItem));
       setCurrentQuestionIndex(index);
     } else {
@@ -97,42 +101,66 @@ export default function QuizScreen() {
     setQuizActive(true);
   };
 
-  const handleSelectChoice = (selectedWord: string) => {
-    if (isAnswered) return;
+  const handleChoicePress = (choice: string) => {
+    if (isAnswered || !currentQuestion) return;
 
+    const correct = choice.toLowerCase() === currentQuestion.word.toLowerCase();
+    setSelectedChoice(choice);
     setIsAnswered(true);
-    setSelectedChoice(selectedWord);
-    const correctWord = quizWords[currentQuestionIndex]?.word;
 
-    if (selectedWord === correctWord) {
-      setAnswerStatus('correct');
+    if (correct) {
       setScore(prevScore => prevScore + 1);
     } else {
-      setAnswerStatus('incorrect');
+      setTimeout(() => {
+        if (currentQuestion) { 
+            setRevealedCorrectChoiceWord(currentQuestion.word);
+        }
+      }, 700); 
     }
+
+    Animated.timing(nextButtonOpacity, {
+      toValue: 1,
+      duration: 300, 
+      useNativeDriver: true, 
+    }).start();
   };
 
-  const proceedToNextQuestion = () => {
+  const handleNextQuestion = () => {
     loadQuestion(currentQuestionIndex + 1, quizWords);
   };
 
   const getChoiceButtonStyle = (choice: string) => {
-    if (!isAnswered) {
-      return styles.choiceButton;
-    }
-    const isCorrectAnswer = choice === quizWords[currentQuestionIndex]?.word;
-    const isSelected = choice === selectedChoice;
+    const isCorrectChoice = currentQuestion && choice.toLowerCase() === currentQuestion.word.toLowerCase();
+    const isSelected = selectedChoice === choice;
 
-    if (isCorrectAnswer) {
-      return [styles.choiceButton, styles.correctChoice];
+    if (isAnswered) {
+      if (isSelected) {
+        return [styles.choiceButton, isCorrectChoice ? styles.correctChoice : styles.incorrectChoice];
+      } else if (isCorrectChoice && revealedCorrectChoiceWord === choice) {
+        return [styles.choiceButton, styles.revealedCorrectChoiceStyle];
+      } else {
+        return [styles.choiceButton, styles.disabledChoice];
+      }
     }
-    if (isSelected && answerStatus === 'incorrect') {
-      return [styles.choiceButton, styles.incorrectChoice];
-    }
-    return [styles.choiceButton, styles.disabledChoice];
+    return [styles.choiceButton];
   };
 
-  // Pre-Quiz View
+  const getChoiceTextStyle = (choice: string) => {
+    const isCorrectChoice = currentQuestion && choice.toLowerCase() === currentQuestion.word.toLowerCase();
+    const isSelected = selectedChoice === choice;
+
+    if (isAnswered) {
+      if (isSelected) {
+        return [styles.choiceText, styles.selectedChoiceText];
+      } else if (isCorrectChoice && revealedCorrectChoiceWord === choice) {
+        return [styles.choiceText, styles.selectedChoiceText];
+      } else {
+        return [styles.choiceText, styles.disabledChoiceText];
+      }
+    }
+    return [styles.choiceText];
+  };
+
   if (!quizActive) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -160,9 +188,7 @@ export default function QuizScreen() {
     );
   }
 
-  // Active Quiz View
-  const currentWordItem = quizWords[currentQuestionIndex];
-  if (!currentWordItem) {
+  if (!currentQuestion) {
     return (
       <SafeAreaView style={styles.safeArea}>
          <StatusBar barStyle="light-content" backgroundColor={styles.safeArea.backgroundColor} />
@@ -185,7 +211,7 @@ export default function QuizScreen() {
         <View style={styles.quizContentArea}> 
             <View style={styles.questionContainer}>
             <Text style={styles.definitionHintText}>DEFINITION</Text>
-            <Text style={styles.definitionText}>{currentWordItem.definition}</Text>
+            <Text style={styles.definitionText}>{currentQuestion.definition}</Text>
             </View>
 
             <View style={styles.choicesContainer}>
@@ -193,25 +219,29 @@ export default function QuizScreen() {
                 <TouchableOpacity 
                 key={index} 
                 style={getChoiceButtonStyle(choice)}
-                onPress={() => handleSelectChoice(choice)}
+                onPress={() => handleChoicePress(choice)}
                 disabled={isAnswered}
                 >
-                <Text style={styles.choiceText}>{choice}</Text>
+                <Text style={getChoiceTextStyle(choice)}>{choice}</Text>
                 </TouchableOpacity>
             ))}
             </View>
         </View>
 
         <View style={styles.quizBottomArea}> 
-            {isAnswered && (
-            <TouchableOpacity style={styles.nextButton} onPress={proceedToNextQuestion}>
-                <Text style={styles.nextButtonText}>
-                {currentQuestionIndex === quizWords.length - 1 ? 'Finish Quiz' : 'Next Question'}
-                </Text>
-                <Ionicons name="arrow-forward-outline" size={22} color="#FFFFFF" style={{marginLeft: 8}}/>
-            </TouchableOpacity>
+            {isAnswered ? (
+            <Animated.View style={{ opacity: nextButtonOpacity, width: '100%', alignItems: 'center' }}>
+              <TouchableOpacity
+                style={[styles.nextButton, styles.cardShadow]}
+                onPress={handleNextQuestion}
+              >
+                <Ionicons name="arrow-forward-outline" size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.nextButtonText}>Next Question</Text>
+              </TouchableOpacity>
+            </Animated.View>
+            ) : (
+            <View style={styles.nextButtonPlaceholder} />
             )}
-            {!isAnswered && <View style={styles.nextButtonPlaceholder} />}
         </View>
       </View>
     </SafeAreaView>
@@ -334,48 +364,57 @@ const styles = StyleSheet.create({
   choiceButton: {
     backgroundColor: '#2C2C2C', 
     paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#444444',
-    minHeight: 55,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  choiceText: {
-    color: '#E0E0E0',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  correctChoice: {
-    backgroundColor: '#28A745', 
-    borderColor: '#1E7E34',     
-  },
-  incorrectChoice: {
-    backgroundColor: '#DC3545', 
-    borderColor: '#B02A37',     
-  },
-  disabledChoice: {
-    backgroundColor: '#2C2C2C', 
-    opacity: 0.5, 
-    borderColor: '#444444',
-  },
-  nextButton: {
+    marginVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 55,
+    borderWidth: 1,
+    borderColor: '#444444',
+  },
+  choiceText: {
+    fontSize: 16,
+    color: '#E0E0E0',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  selectedChoiceText: { 
+    color: '#FFFFFF', 
+    fontWeight: 'bold',
+  },
+  disabledChoiceText: { 
+    color: '#777777',
+  },
+  correctChoice: {
+    backgroundColor: '#4CAF50', 
+    borderColor: '#388E3C',     
+  },
+  incorrectChoice: {
+    backgroundColor: '#F44336', 
+    borderColor: '#D32F2F',     
+  },
+  revealedCorrectChoiceStyle: { 
+    backgroundColor: 'transparent', 
+    borderColor: '#4CAF50', 
+    borderWidth: 2,
+  },
+  disabledChoice: {
+    backgroundColor: '#222222', 
+    borderColor: '#333333',
+    opacity: 0.6, 
+  },
+  nextButton: {
     backgroundColor: '#007AFF', 
-    paddingVertical: 14,
+    paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 12,
-    minWidth: '70%', 
-    elevation: 5,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '70%',
+    alignSelf: 'center',
   },
   nextButtonText: {
     color: '#FFFFFF',
@@ -387,8 +426,5 @@ const styles = StyleSheet.create({
   },
   placeholderText: { 
     fontSize: 16,
-    color: '#888888',
-    fontStyle: 'italic',
-    textAlign: 'center',
   },
 });
