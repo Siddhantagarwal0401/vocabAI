@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView, StatusBar, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, StatusBar, ActivityIndicator, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CustomAlert, { AlertButton } from '../components/CustomAlert'; 
 
 const ANALYTICS_STORAGE_KEY = 'quizAnalyticsData';
 
@@ -18,7 +19,13 @@ export interface QuizAttempt {
 const AnalyticsScreen = () => {
   const [quizHistory, setQuizHistory] = useState<QuizAttempt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets(); 
+
+  // State for CustomAlert
+  const [isAlertVisible, setIsAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertButtons, setAlertButtons] = useState<AlertButton[]>([]);
 
   const loadQuizHistory = async () => {
     setIsLoading(true);
@@ -46,31 +53,40 @@ const AnalyticsScreen = () => {
   );
 
   const confirmClearHistory = () => {
-    Alert.alert(
-      "Clear Quiz History",
-      "Are you sure you want to delete all your quiz analytics? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
+    setAlertTitle("Clear Quiz History");
+    setAlertMessage("Are you sure you want to delete all your quiz analytics? This action cannot be undone.");
+    setAlertButtons([
+      { 
+        text: "Cancel", 
+        onPress: () => setIsAlertVisible(false), 
+        style: 'cancel' 
+      },
+      { 
+        text: "Clear All", 
+        onPress: () => {
+          setIsAlertVisible(false);
+          clearHistory(); 
         },
-        {
-          text: "Clear All",
-          onPress: clearHistory,
-          style: "destructive"
-        }
-      ]
-    );
+        style: 'destructive'
+      }
+    ]);
+    setIsAlertVisible(true);
   };
 
   const clearHistory = async () => {
     try {
       await AsyncStorage.removeItem(ANALYTICS_STORAGE_KEY);
       setQuizHistory([]);
-      Alert.alert('Success', 'Quiz history has been cleared.');
+      setAlertTitle("Success");
+      setAlertMessage("Quiz history has been cleared.");
+      setAlertButtons([{ text: "OK", onPress: () => setIsAlertVisible(false), style: 'primary' }]);
+      setIsAlertVisible(true); 
     } catch (error) {
       console.error('Failed to clear quiz history:', error);
-      Alert.alert('Error', 'Could not clear quiz history.');
+      setAlertTitle("Error");
+      setAlertMessage("Could not clear quiz history.");
+      setAlertButtons([{ text: "OK", onPress: () => setIsAlertVisible(false), style: 'primary' }]);
+      setIsAlertVisible(true);
     }
   };
 
@@ -118,12 +134,12 @@ const AnalyticsScreen = () => {
           <Text style={styles.headerTitle}>Quiz Analytics</Text>
         </View>
         {quizHistory.length > 0 ? (
-          <TouchableOpacity onPress={confirmClearHistory} style={styles.clearButton}>
-            <Ionicons name="trash-bin-outline" size={22} color="#FF6B6B" style={{ marginRight: 5 }} />
+          <TouchableOpacity onPress={confirmClearHistory} style={styles.clearButton}> 
+            <Ionicons name="trash-bin-outline" size={22} color="#FF6B6B" style={{marginRight: 5}} />
             <Text style={styles.clearButtonText}>Clear</Text>
           </TouchableOpacity>
         ) : (
-          <View style={styles.headerRightPlaceholder} />
+          <View style={styles.headerRightPlaceholder} /> 
         )}
       </View>
 
@@ -131,7 +147,7 @@ const AnalyticsScreen = () => {
         <View style={styles.emptyContainer}>
           <Ionicons name="stats-chart-outline" size={60} color="#555555" />
           <Text style={styles.emptyText}>No quiz history yet.</Text>
-          <Text style={styles.emptySubText}>Complete some quizzes to see your progress!</Text>
+          <Text style={styles.emptySubText}>Start taking quizzes to see your progress!</Text>
         </View>
       ) : (
         <FlatList
@@ -141,6 +157,13 @@ const AnalyticsScreen = () => {
           contentContainerStyle={styles.listContentContainer}
         />
       )}
+      <CustomAlert
+        isVisible={isAlertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        buttons={alertButtons}
+        onRequestClose={() => setIsAlertVisible(false)}
+      />
     </SafeAreaView>
   );
 };

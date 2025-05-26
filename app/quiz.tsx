@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Alert, Animated } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFavourites } from '../context/FavouritesContext';
 import { VocabularyItem } from './VocabularyCard';
 import generalWordListJson from '../assets/word_list.json';
+import CustomAlert, { AlertButton } from '../components/CustomAlert'; // Import CustomAlert
 
 interface QuizAttempt {
   id: string;
@@ -44,6 +45,12 @@ export default function QuizScreen() {
 
   const nextButtonOpacity = useRef(new Animated.Value(0)).current;
   const [revealedCorrectChoiceWord, setRevealedCorrectChoiceWord] = useState<string | null>(null);
+
+  // State for CustomAlert
+  const [isAlertVisible, setIsAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertButtons, setAlertButtons] = useState<AlertButton[]>([]);
 
   const generateChoices = (correctItem: VocabularyItem): string[] => {
     const correctWord = correctItem.word;
@@ -86,21 +93,41 @@ export default function QuizScreen() {
       setCurrentQuestionIndex(index);
     } else {
       saveQuizAttempt();
-      Alert.alert(
-        "Quiz Finished!", 
-        `Your score: ${score} / ${quizWords.length} (${((score / quizWords.length) * 100).toFixed(0)}%).\n\nView detailed progress in the 'Analytics' tab.`,
-        [{ text: "OK", onPress: () => resetQuiz() }]
-      );
+      showQuizFinishedAlert(score, quizWords.length); // Use CustomAlert
     }
   };
 
   const startQuiz = () => {
     if (favourites.length === 0) {
-        Alert.alert("No Favourites", "Please add some words to your favourites to start a quiz.");
+        // Alert.alert("No Favourites", "Please add some words to your favourites to start a quiz.");
+        setAlertTitle("No Favourites");
+        setAlertMessage("Please add some words to your favourites to start a quiz.");
+        setAlertButtons([
+          { 
+            text: "OK", 
+            onPress: () => {
+              setIsAlertVisible(false);
+            },
+            style: 'primary' 
+          }
+        ]);
+        setIsAlertVisible(true);
         return;
     }
     if (favourites.length < 2 && NUM_CHOICES > 1) {
-        Alert.alert("Not Enough Words", `You need at least ${Math.max(2, NUM_CHOICES)} different words in favourites for a meaningful quiz with ${NUM_CHOICES} choices. You have ${favourites.length}.`);
+        // Alert.alert("Not Enough Words", `You need at least ${Math.max(2, NUM_CHOICES)} different words in favourites for a meaningful quiz with ${NUM_CHOICES} choices. You have ${favourites.length}.`);
+        setAlertTitle("Not Enough Words");
+        setAlertMessage(`You need at least ${Math.max(2, NUM_CHOICES)} different words in favourites for a meaningful quiz with ${NUM_CHOICES} choices. You have ${favourites.length}.`);
+        setAlertButtons([
+          { 
+            text: "OK", 
+            onPress: () => {
+              setIsAlertVisible(false);
+            },
+            style: 'primary' 
+          }
+        ]);
+        setIsAlertVisible(true);
         return;
     }
 
@@ -193,7 +220,19 @@ export default function QuizScreen() {
       console.log('Quiz attempt saved:', attempt);
     } catch (error) {
       console.error('Failed to save quiz attempt:', error);
-      Alert.alert('Error', 'Could not save your quiz results.');
+      // Alert.alert('Error', 'Could not save your quiz results.');
+      setAlertTitle("Error");
+      setAlertMessage("Could not save your quiz results.");
+      setAlertButtons([
+        { 
+          text: "OK", 
+          onPress: () => {
+            setIsAlertVisible(false);
+          },
+          style: 'primary' 
+        }
+      ]);
+      setIsAlertVisible(true);
     }
   };
 
@@ -208,6 +247,22 @@ export default function QuizScreen() {
     setQuizActive(false);
     nextButtonOpacity.setValue(0);
     setRevealedCorrectChoiceWord(null);
+  };
+
+  const showQuizFinishedAlert = (finalScore: number, totalQuestions: number) => {
+    setAlertTitle("Quiz Finished!");
+    setAlertMessage(`Your score: ${finalScore} / ${totalQuestions} (${((finalScore / totalQuestions) * 100).toFixed(0)}%).\n\nView detailed progress in the 'Analytics' tab.`);
+    setAlertButtons([
+      { 
+        text: "OK", 
+        onPress: () => {
+          setIsAlertVisible(false);
+          resetQuiz();
+        },
+        style: 'primary' 
+      }
+    ]);
+    setIsAlertVisible(true);
   };
 
   if (!quizActive) {
@@ -293,6 +348,13 @@ export default function QuizScreen() {
             )}
         </View>
       </View>
+      <CustomAlert 
+        isVisible={isAlertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        buttons={alertButtons}
+        onRequestClose={() => setIsAlertVisible(false)} // Allow closing via overlay or back button
+      />
     </SafeAreaView>
   );
 }
