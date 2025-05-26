@@ -88,7 +88,7 @@ export default function QuizScreen() {
       saveQuizAttempt();
       Alert.alert(
         "Quiz Finished!", 
-        `Your score: ${score} / ${quizWords.length}`,
+        `Your score: ${score} / ${quizWords.length} (${((score / quizWords.length) * 100).toFixed(0)}%).\n\nView detailed progress in the 'Analytics' tab.`,
         [{ text: "OK", onPress: () => resetQuiz() }]
       );
     }

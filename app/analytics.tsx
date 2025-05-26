@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView, StatusBar, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, StatusBar, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,47 +26,79 @@ const AnalyticsScreen = () => {
       const storedHistory = await AsyncStorage.getItem(ANALYTICS_STORAGE_KEY);
       if (storedHistory) {
         const parsedHistory: QuizAttempt[] = JSON.parse(storedHistory);
-        // Sort by date, most recent first
         parsedHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setQuizHistory(parsedHistory);
+      } else {
+        setQuizHistory([]);
       }
     } catch (error) {
       console.error('Failed to load quiz history:', error);
-      // Optionally, show an error message to the user
+      setQuizHistory([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // useFocusEffect to reload data when the screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadQuizHistory();
     }, [])
   );
 
+  const confirmClearHistory = () => {
+    Alert.alert(
+      "Clear Quiz History",
+      "Are you sure you want to delete all your quiz analytics? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Clear All",
+          onPress: clearHistory,
+          style: "destructive"
+        }
+      ]
+    );
+  };
+
   const clearHistory = async () => {
     try {
       await AsyncStorage.removeItem(ANALYTICS_STORAGE_KEY);
       setQuizHistory([]);
-      // Optionally, show a confirmation message
+      Alert.alert('Success', 'Quiz history has been cleared.');
     } catch (error) {
       console.error('Failed to clear quiz history:', error);
-      // Optionally, show an error message
+      Alert.alert('Error', 'Could not clear quiz history.');
     }
   };
 
-  const renderAttempt = ({ item }: { item: QuizAttempt }) => (
-    <View style={styles.attemptCard}>
-      <View style={styles.attemptHeader}>
-        <Text style={styles.attemptDate}>{new Date(item.date).toLocaleDateString()} - {new Date(item.date).toLocaleTimeString()}</Text>
-        <Text style={[styles.attemptScore, item.percentage >= 70 ? styles.goodScore : styles.averageScore]}>
-          {item.percentage.toFixed(0)}%
-        </Text>
+  const getScoreIcon = (percentage: number) => {
+    if (percentage >= 85) return { name: "trophy-outline" as const, color: '#4CAF50' };
+    if (percentage >= 60) return { name: "checkmark-circle-outline" as const, color: '#FFC107' };
+    return { name: "alert-circle-outline" as const, color: '#F44336' };
+  };
+
+  const renderAttempt = ({ item }: { item: QuizAttempt }) => {
+    const scoreIcon = getScoreIcon(item.percentage);
+    return (
+      <View style={styles.attemptCard}>
+        <View style={styles.attemptCardHeader}>
+          <Text style={styles.attemptDate}>{new Date(item.date).toLocaleDateString()} - {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+          <View style={styles.scoreIconContainer}>
+            <Ionicons name={scoreIcon.name} size={24} color={scoreIcon.color} />
+          </View>
+        </View>
+        <View style={styles.attemptCardBody}>
+          <Text style={styles.attemptScoreText}>Score: {item.score} / {item.totalQuestions}</Text>
+          <Text style={[styles.attemptPercentage, { color: scoreIcon.color }]}>
+            {item.percentage.toFixed(0)}%
+          </Text>
+        </View>
       </View>
-      <Text style={styles.attemptDetails}>Score: {item.score} / {item.totalQuestions}</Text>
-    </View>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
@@ -86,8 +118,9 @@ const AnalyticsScreen = () => {
           <Text style={styles.headerTitle}>Quiz Analytics</Text>
         </View>
         {quizHistory.length > 0 ? (
-          <TouchableOpacity onPress={clearHistory} style={styles.clearButton}>
-            <Ionicons name="trash-outline" size={26} color="#FF6B6B" />
+          <TouchableOpacity onPress={confirmClearHistory} style={styles.clearButton}>
+            <Ionicons name="trash-bin-outline" size={22} color="#FF6B6B" style={{ marginRight: 5 }} />
+            <Text style={styles.clearButtonText}>Clear</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.headerRightPlaceholder} />
@@ -129,8 +162,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333333',
     width: '100%',
   },
   headerTitleContainer: {
@@ -145,13 +176,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   clearButton: {
-    padding: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: '#2c1d1d',
+    borderRadius: 8,
+  },
+  clearButtonText: {
+    color: '#FF8F8F',
+    fontSize: 14,
+    fontWeight: '600',
   },
   headerLeftPlaceholder: {
-    width: 36,
+    width: 70,
   },
   headerRightPlaceholder: {
-    width: 36,
+    width: 70,
   },
   listContentContainer: {
     paddingHorizontal: 15,
@@ -159,27 +200,42 @@ const styles = StyleSheet.create({
   },
   attemptCard: {
     backgroundColor: '#1E1E1E',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 15,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
-  attemptHeader: {
+  attemptCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
   },
   attemptDate: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#AAAAAA',
+    fontWeight: '500',
   },
-  attemptScore: {
-    fontSize: 18,
+  scoreIconContainer: {
+    // Styles for icon container if needed, e.g., padding
+  },
+  attemptCardBody: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  attemptScoreText: {
+    fontSize: 16,
+    color: '#E0E0E0',
+    fontWeight: '500',
+  },
+  attemptPercentage: {
+    fontSize: 20,
     fontWeight: 'bold',
   },
   goodScore: {
@@ -188,9 +244,8 @@ const styles = StyleSheet.create({
   averageScore: {
     color: '#FFC107',
   },
-  attemptDetails: {
-    fontSize: 15,
-    color: '#E0E0E0',
+  poorScore: {
+    color: '#F44336',
   },
   emptyContainer: {
     flex: 1,
