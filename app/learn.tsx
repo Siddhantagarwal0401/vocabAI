@@ -16,7 +16,6 @@ export default function LearnScreen() {
       try {
         const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${wordStr}`);
         if (!response.ok) {
-          console.warn(`API error for ${wordStr} (DictionaryAPI): ${response.status}`);
           return null; 
         }
         const data = await response.json();
@@ -63,8 +62,9 @@ export default function LearnScreen() {
 
       const newVocabularyItems = await fetchWordDetails(randomWordStrings);
       
+      const existingWordIds = new Set(displayedWords.map(item => item.id));
       const uniqueNewItems = newVocabularyItems.filter(newItem => 
-        newItem && !displayedWords.some(existingItem => existingItem.id === newItem.id)
+        newItem && !existingWordIds.has(newItem.id)
       );
 
       if (uniqueNewItems.length > 0) {
@@ -89,9 +89,9 @@ export default function LearnScreen() {
   }, []); 
 
 
-  const renderItem = ({ item }: { item: VocabularyItem }) => (
+  const renderItem = useCallback(({ item }: { item: VocabularyItem }) => (
     <VocabularyCard item={item} />
-  );
+  ), []);
 
   const renderFooter = () => {
     if (!isLoadingMore) return null;
@@ -133,7 +133,7 @@ export default function LearnScreen() {
       <FlatList
         data={displayedWords}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id + Math.random()} 
+        keyExtractor={(item) => item.id} 
         pagingEnabled
         showsVerticalScrollIndicator={false}
         snapToAlignment={'start'}

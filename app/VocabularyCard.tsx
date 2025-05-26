@@ -28,9 +28,16 @@ const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
           contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.wordText}>{item.word}</Text>
+          <Text 
+            style={styles.wordText}
+            numberOfLines={1}
+            adjustsFontSizeToFit={true}
+            minimumFontScale={0.5} // Prevents font from becoming too small
+          >
+            {item.word}
+          </Text>
           <Text style={styles.definitionText}>{item.definition}</Text>
-          <Text style={styles.exampleText}>"{item.example}"</Text>
+          {item.example && <Text style={styles.exampleText}>"{item.example}"</Text>}
         </ScrollView>
       </View>
     </View>
