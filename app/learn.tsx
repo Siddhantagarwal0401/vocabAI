@@ -3,7 +3,7 @@ import { Text, View, FlatList, StyleSheet, Dimensions, SafeAreaView, StatusBar, 
 import { VocabularyCard, type VocabularyItem } from './VocabularyCard';
 
 const { height } = Dimensions.get('window');
-const BATCH_SIZE = 7; // Number of words to fetch details for at a time
+const BATCH_SIZE = 15; // Number of words to fetch details for at a time
 
 export default function LearnScreen() {
   const [displayedWords, setDisplayedWords] = useState<VocabularyItem[]>([]);
@@ -93,11 +93,17 @@ export default function LearnScreen() {
     <VocabularyCard item={item} />
   ), []);
 
+  const getItemLayout = useCallback((data: any, index: number) => ({
+    length: height, // Each item has the full screen height
+    offset: height * index, // Offset from the top
+    index,
+  }), []); // height is a constant from Dimensions, so empty deps is fine here
+
   const renderFooter = () => {
     if (!isLoadingMore) return null;
     return (
       <View style={styles.footerLoadingContainer}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
+        <ActivityIndicator size="large" color="#00DFD0" /> // Vibrant Teal loading indicator
       </View>
     );
   };
@@ -105,7 +111,7 @@ export default function LearnScreen() {
   if (isLoading && displayedWords.length === 0) { 
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
+        <ActivityIndicator size="large" color="#00DFD0" /> // Vibrant Teal loading indicator
         <Text style={styles.loadingText}>Loading Vocabulary...</Text>
       </SafeAreaView>
     );
@@ -132,6 +138,7 @@ export default function LearnScreen() {
       <StatusBar barStyle="light-content" />
       <FlatList
         data={displayedWords}
+        extraData={displayedWords}
         renderItem={renderItem}
         keyExtractor={(item) => item.id} 
         pagingEnabled
@@ -139,6 +146,7 @@ export default function LearnScreen() {
         snapToAlignment={'start'}
         decelerationRate={'fast'}
         snapToInterval={height}
+        getItemLayout={getItemLayout}
         style={styles.flatList}
         onEndReached={loadMoreWords}
         onEndReachedThreshold={0.5} 
@@ -166,12 +174,12 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#B0B0B0',
+    color: '#C0C0C0', // Brighter loading text
     textAlign: 'center',
   },
   errorText: {
     fontSize: 16,
-    color: '#FF6B6B',
+    color: '#FF7F50', // Coral error text
     textAlign: 'center',
   },
   footerLoadingContainer: {

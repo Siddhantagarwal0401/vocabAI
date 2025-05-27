@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FavouritesProvider } from '../context/FavouritesContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function AppLayout() {
   const insets = useSafeAreaInsets();
@@ -12,22 +13,28 @@ export default function AppLayout() {
     <FavouritesProvider>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#FFA001', 
-          tabBarInactiveTintColor: '#CCCCCC', 
+          tabBarActiveTintColor: '#FFA001',
+          tabBarInactiveTintColor: '#CCCCCC',
           tabBarShowLabel: false, 
           tabBarStyle: {
-            backgroundColor: '#1C1C1E', 
             borderTopWidth: 0,
             paddingBottom: insets.bottom, 
             height: 58 + insets.bottom, 
-            // Refined shadow for a sleeker look
-            shadowColor: '#000000', // Explicitly black for shadow
-            shadowOffset: { width: 0, height: -1 }, // Softer, less pronounced offset
-            shadowOpacity: 0.10, // Reduced opacity
-            shadowRadius: 3.0, // Slightly softer radius
-            elevation: 5, // Adjusted elevation for Android
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: -1 },
+            shadowOpacity: 0.10,
+            shadowRadius: 3.0,
+            elevation: 5,
           },
-          headerShown: false, 
+          headerShown: false,
+          tabBarBackground: () => (
+            <LinearGradient
+              colors={['#2A2A2E', '#1C1C1E']}
+              style={{ flex: 1 }}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+            />
+          ),
         }}
       >
         <Tabs.Screen

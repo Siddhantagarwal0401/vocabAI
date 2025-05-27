@@ -32,15 +32,17 @@ const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
   return (
     <View style={styles.cardContainer}>
       <LinearGradient
-        colors={['#2A2A2A', '#1C1C1C']}
+        colors={['#00796B', '#FF7043']}
         style={styles.contentOuterContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
         {/* Favourite Button */}
         <TouchableOpacity onPress={toggleFavourite} style={styles.favouriteButton}>
           <Ionicons 
             name={isFav ? "heart" : "heart-outline"} 
             size={32} 
-            color={isFav ? "#FF6B6B" : "#EAEAEA"} 
+            color={isFav ? "#FFA726" : "#FFFFFF"} 
           />
         </TouchableOpacity>
 
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
     fontWeight: '600', 
     textAlign: 'center',
     marginBottom: 20, 
-    color: '#EAEAEA',
+    color: '#FFFFFF',
   },
   scrollableContentContainer: {
     width: '100%', 
@@ -119,7 +121,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20, 
     marginBottom: 20, 
-    color: '#B0B0B0',
+    color: '#E0E0E0',
     fontStyle: 'normal',
     lineHeight: 30,
   },
@@ -127,7 +129,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginTop: 15, 
-    color: '#888888',
+    color: '#C0C0C0',
     lineHeight: 28,
     fontStyle: 'italic',
   },
