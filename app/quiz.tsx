@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, TouchableOpacity, Animated } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFavourites } from '../context/FavouritesContext';
-import { VocabularyItem } from './VocabularyCard';
+import React, { useRef, useState } from 'react';
+import { Animated, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import generalWordListJson from '../assets/word_list.json';
 import CustomAlert, { AlertButton } from '../components/CustomAlert'; // Import CustomAlert
+import { useFavourites } from '../context/FavouritesContext';
+import { VocabularyItem } from './VocabularyCard';
 
 interface QuizAttempt {
   id: string;
@@ -362,7 +362,8 @@ export default function QuizScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#121212', 
+    backgroundColor: '#121212',
+    paddingBottom: 150, // Add padding to account for bottom navigation
   },
   container: {
     flex: 1,
@@ -425,15 +426,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center',
     paddingTop: 60, 
-    paddingBottom: 70, 
+    paddingBottom: 150, // Extra padding to prevent content from being hidden behind the Next button
   },
   quizBottomArea: { 
     width: '100%',
     position: 'absolute',
-    bottom: 10, 
+    bottom: 100, // Position above the bottom navigation (20px padding + ~80px nav height)
     left: 20,
     right: 20,
-    alignItems: 'center', 
+    alignItems: 'center',
+    zIndex: 10, // Ensure it stays above other elements
   },
   progressText: {
     fontSize: 14,

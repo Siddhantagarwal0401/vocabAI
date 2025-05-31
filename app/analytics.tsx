@@ -279,7 +279,7 @@ const AnalyticsScreen = () => {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContentContainer}
           ListHeaderComponent={() => <View style={{ height: 10 }} />} // Spacer
-          ListFooterComponent={() => <View style={{ height: insets.bottom + 10 }} />} // Spacer for bottom nav
+          ListFooterComponent={() => <View style={{ height: insets.bottom + 80 }} />} // Increased bottom space for the floating tab bar
         />
       ) : (
         !isLoading && (
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   },
   listContentContainer: {
     paddingHorizontal: 15,
-    paddingBottom: 20,
+    paddingBottom: 100, // Increased bottom padding to ensure last item is visible above navbar
   },
   attemptCard: {
     backgroundColor: '#1E1E1E',

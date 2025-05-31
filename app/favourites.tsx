@@ -71,7 +71,7 @@ export default function FavouritesScreen() {
           keyExtractor={(item) => item.id}
           style={styles.list}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }} // Increased bottom padding for floating tab bar
           useNativeDriver={false} // Recommended for SwipeListView
         />
       </View>
