@@ -1,14 +1,24 @@
-import React from 'react';
-import { Tabs, usePathname } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { Tabs, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FavouritesProvider } from '../context/FavouritesContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import OnboardingScreen from './onboarding/OnboardingScreen';
 
 const { width } = Dimensions.get('window');
+const ONBOARDING_COMPLETE = '@onboarding_complete';
 
-const TabButton = ({ icon, active, primary = false, onPress }: { icon: string; active: boolean; primary?: boolean; onPress: () => void }) => {
+interface TabButtonProps {
+  icon: string;
+  active: boolean;
+  primary?: boolean;
+  onPress: () => void;
+}
+
+const TabButton = ({ icon, active, primary = false, onPress }: TabButtonProps) => {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -34,6 +44,44 @@ const TabButton = ({ icon, active, primary = false, onPress }: { icon: string; a
 export default function AppLayout() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const router = useRouter();
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const value = await AsyncStorage.getItem(ONBOARDING_COMPLETE);
+        setShowOnboarding(value !== 'true');
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        setShowOnboarding(true);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
+  const handleOnboardingComplete = async () => {
+    try {
+      await AsyncStorage.setItem(ONBOARDING_COMPLETE, 'true');
+      setShowOnboarding(false);
+      router.replace('/learn');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    }
+  };
+
+  if (showOnboarding === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}>
+        <ActivityIndicator size="large" color="#FFA001" />
+      </View>
+    );
+  }
+
+  if (showOnboarding) {
+    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+  }
 
   const getActiveRoute = () => {
     if (pathname.includes('learn')) return 'learn';
@@ -76,7 +124,6 @@ export default function AppLayout() {
                 icon={activeRoute === 'learn' ? 'book' : 'book-outline'}
                 active={activeRoute === 'learn'}
                 onPress={() => {
-                  const router = require('expo-router').router;
                   router.replace('/learn');
                 }}
               />
@@ -84,7 +131,6 @@ export default function AppLayout() {
                 icon={activeRoute === 'favourites' ? 'heart' : 'heart-outline'}
                 active={activeRoute === 'favourites'}
                 onPress={() => {
-                  const router = require('expo-router').router;
                   router.replace('/favourites');
                 }}
               />
@@ -92,7 +138,6 @@ export default function AppLayout() {
                 icon={activeRoute === 'quiz' ? 'school' : 'school-outline'}
                 active={activeRoute === 'quiz'}
                 onPress={() => {
-                  const router = require('expo-router').router;
                   router.replace('/quiz');
                 }}
               />
@@ -100,7 +145,6 @@ export default function AppLayout() {
                 icon={activeRoute === 'analytics' ? 'stats-chart' : 'stats-chart-outline'}
                 active={activeRoute === 'analytics'}
                 onPress={() => {
-                  const router = require('expo-router').router;
                   router.replace('/analytics');
                 }}
               />
