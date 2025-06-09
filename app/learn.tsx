@@ -4,7 +4,51 @@ import { VocabularyCard, type VocabularyItem } from './VocabularyCard';
 
 const { height } = Dimensions.get('window');
 const BATCH_SIZE = 15; // Number of words to fetch details for at a time
-const SEED_WORDS = ['common', 'word', 'list', 'example', 'random', 'learn', 'study', 'play', 'happy', 'world', 'science', 'nature', 'music', 'art', 'food', 'travel', 'friend', 'family', 'future', 'dream', 'success', 'challenge', 'journey', 'moment', 'memory', 'knowledge', 'power', 'change', 'idea', 'create']; // Expanded list for more variety
+const SEED_WORDS = [
+  // More Advanced / Less Common SAT-Relevant Terms
+  'abnegation', 'aggrandize', 'alacrity', 'anathema', 'antipathy', 'apocryphal', 'approbation',
+  'arrogate', 'asceticism', 'assiduous', 'augury', 'autocratic', 'bilious', 'blandishment',
+  'bombastic', 'boorish', 'cajole', 'calumny', 'capitulate', 'cavil', 'celerity', 'chary',
+  'chicanery', 'churlish', 'circumlocution', 'clairvoyant', 'cogitate', 'cognoscenti',
+  'comport', 'contumacious', 'convivial', 'corpulent', 'cupidity', 'dearth', 'debilitate',
+  'decorous', 'demagogue', 'denizen', 'deprecate', 'derision', 'desiccated', 'desultory',
+  'diaphanous', 'diffidence', 'dilatory', 'disaffected', 'disapprobation', 'discomfit',
+  'dissemble', 'dogmatic', 'ebullience', 'effrontery', 'emollient', 'encomium', 'endemic',
+  'enervate', 'engender', 'epistemology', 'equanimity', 'equivocate', 'erudite', 'evanescent',
+  'exacerbate', 'exculpate', 'execrable', 'exigent', 'expatiate', 'expurgate', 'extemporaneous',
+  'factious', 'fatuous', 'feckless', 'fecund', 'flagitious', 'florid', 'fractious', 'fulminate',
+  'furtive', 'gainsay', 'garrulous', 'germane', 'grandiloquent', 'hegemony', 'heretical',
+  'ignominious', 'impecunious', 'imperious', 'imperturbable', 'implacable', 'impugn',
+  'inchoate', 'incontrovertible', 'indefatigable', 'indolent', 'ineffable', 'ineluctable',
+  'inexorable', 'ingenuous', 'inimical', 'iniquity', 'insipid', 'insolvent', 'insouciant',
+  'intransigent', 'inured', 'invective', 'irascible', 'jejune', 'kismet', 'kowtow', 'largesse',
+  'lassitude', 'libertine', 'limpid', 'loquacious', 'lugubrious', 'maladroit', 'malinger',
+  'martinet', 'mawkish', 'mellifluous', 'mendacious', 'mercurial', 'misanthrope', 'mitigate',
+  'modicum', 'munificent', 'myopic', 'nadir', 'nascent', 'nebulous', 'neophyte', 'noisome',
+  'nonplussed', 'obdurate', 'obsequious', 'obstreperous', 'obtuse', 'officious', 'onerous',
+  'opprobrium', 'ossify', 'ostracize', 'panacea', 'panegyric', 'paragon', 'parsimonious',
+  'paucity', 'peccadillo', 'pellucid', 'penchant', 'penurious', 'peremptory', 'perfidious',
+  'perfunctory', 'pernicious', 'perspicacious', 'pertinacious', 'phlegmatic', 'pithy',
+  'platitude', 'plethora', 'polemical', 'prattle', 'precipitous', 'precocious', 'predilection',
+  'prescient', 'prevaricate', 'probity', 'proclivity', 'prodigal', 'prodigious', 'profligate',
+  'proliferate', 'prolix', 'promulgate', 'propinquity', 'propitious', 'prosaic', 'proscribe',
+  'protean', 'protracted', 'provident', 'prurient', 'puerile', 'pugnacious', 'pulchritude',
+  'punctilious', 'pusillanimous', 'quagmire', 'quell', 'querulousness', 'quiescent', 'quotidian',
+  'raconteur', 'recalcitrance', 'recondite', 'redoubtable', 'refractory', 'relegate', 'reprobate',
+  'repudiate', 'rescind', 'restive', 'reticent', 'reverent', 'rife', 'rubric', 'sacrosanct',
+  'sagacious', 'salubrious', 'sanguine', 'sardonic', 'scurrilous', 'sedulous', 'sempiternal',
+  'sinecure', 'solicitous', 'solipsistic', 'somnolent', 'sonorous', 'sophistry', 'soporific',
+  'spartan', 'specious', 'splenetic', 'sporadic', 'spurious', 'staid', 'stentorian', 'stoic',
+  'stolid', 'subjugate', 'subterfuge', 'succinct', 'sullen', 'supercilious', 'surfeit',
+  'surreptitious', 'sycophant', 'tacit', 'tawdry', 'temerity', 'tendentious', 'tenuous',
+  'terse', 'timorous', 'torpid', 'tractable', 'transient', 'transmute', 'trenchant',
+  'trepidation', 'truculent', 'turbid', 'turgid', 'turpitude', 'ubiquity', 'umbrage',
+  'unctuous', 'untenable', 'upbraid', 'urbane', 'usurp', 'vacuous', 'vapid', 'variegated',
+  'vaunted', 'venal', 'venerate', 'veracious', 'verbose', 'verdant', 'verisimilitude',
+  'vernacular', 'vestige', 'vicarious', 'vicissitude', 'vilify', 'vindicate', 'vindictive',
+  'virtuoso', 'virulent', 'viscous', 'vitiate', 'vituperate', 'vociferous', 'voluble',
+  'voracious', 'welter', 'winsome', 'wizened', 'xenophobia', 'yearn', 'zany'
+];
 
 export default function LearnScreen() {
   const [displayedWords, setDisplayedWords] = useState<VocabularyItem[]>([]);
