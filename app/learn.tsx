@@ -1,36 +1,65 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Text, View, FlatList, StyleSheet, Dimensions, SafeAreaView, StatusBar, ActivityIndicator } from "react-native";
 import { VocabularyCard, type VocabularyItem } from './VocabularyCard';
 
 const { height } = Dimensions.get('window');
 const BATCH_SIZE = 15; // Number of words to fetch details for at a time
+const SEED_WORDS = ['common', 'word', 'list', 'example', 'random', 'learn', 'study', 'play', 'happy', 'world', 'science', 'nature', 'music', 'art', 'food', 'travel', 'friend', 'family', 'future', 'dream', 'success', 'challenge', 'journey', 'moment', 'memory', 'knowledge', 'power', 'change', 'idea', 'create']; // Expanded list for more variety
 
 export default function LearnScreen() {
   const [displayedWords, setDisplayedWords] = useState<VocabularyItem[]>([]);
   const [isLoading, setIsLoading] = useState(true); // For initial load
   const [isLoadingMore, setIsLoadingMore] = useState(false); // For subsequent loads
   const [error, setError] = useState<string | null>(null);
+  const seedWordIndexRef = useRef(0);
 
   const fetchWordDetails = useCallback(async (wordsToFetch: string[]): Promise<VocabularyItem[]> => {
     const promises = wordsToFetch.map(async (wordStr) => {
       try {
         const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${wordStr}`);
         if (!response.ok) {
+          // Log a warning or error, but return null to not break Promise.all
+          console.warn(`DictionaryAPI request failed for ${wordStr}: ${response.status}`);
           return null; 
         }
         const data = await response.json();
-        if (data && data.length > 0 && data[0].word) { 
-          const firstEntry = data[0];
-          const firstMeaning = firstEntry.meanings?.[0];
-          const firstDefinition = firstMeaning?.definitions?.[0];
+
+        if (data && data.length > 0 && data[0].word) {
+          const entry = data[0];
+          let definition = 'No definition found.';
+          let example = 'No example sentence available.';
+          let definitionFound = false;
+
+          // Iterate through meanings and their definitions to find the first available example
+          for (const meaning of entry.meanings || []) {
+            for (const def of meaning.definitions || []) {
+              if (!definitionFound) { // Capture the first definition encountered
+                definition = def.definition || definition;
+                definitionFound = true;
+              }
+              if (def.example) {
+                // If an example is found, use its definition and example
+                definition = def.definition || definition; // Prefer the definition associated with the example
+                example = def.example;
+                // Once an example is found, we can stop searching in this entry
+                return {
+                  id: entry.word,
+                  word: entry.word,
+                  definition,
+                  example,
+                };
+              }
+            }
+          }
+          // If no example was found after checking all definitions, return with the first definition found (or default)
           return {
-            id: firstEntry.word, 
-            word: firstEntry.word,
-            definition: firstDefinition?.definition || 'No definition found.',
-            example: firstDefinition?.example || 'No example sentence available.',
+            id: entry.word,
+            word: entry.word,
+            definition,
+            example, // This will be 'No example sentence available.' if none was found
           };
         }
-        console.warn(`No valid data structure for ${wordStr} from DictionaryAPI`);
+        console.warn(`No valid data structure for ${wordStr} from DictionaryAPI (e.g., word not found). Response:`, data);
         return null;
       } catch (err) {
         console.error(`Failed to fetch data for ${wordStr} (DictionaryAPI):`, err);
@@ -42,44 +71,102 @@ export default function LearnScreen() {
   }, []);
 
   const loadMoreWords = useCallback(async () => {
-    if (isLoadingMore) return; 
+    if (isLoadingMore) return;
 
     setIsLoadingMore(true);
-    setError(null); 
+    setError(null);
 
     try {
-      const randomWordStringsResponse = await fetch(`https://random-word-api.herokuapp.com/word?number=${BATCH_SIZE}`);
-      if (!randomWordStringsResponse.ok) {
-        throw new Error(`Failed to fetch random words (RandomWordAPI): ${randomWordStringsResponse.status}`);
-      }
-      const randomWordStrings = await randomWordStringsResponse.json();
+      const currentSeedWord = SEED_WORDS[seedWordIndexRef.current];
+      seedWordIndexRef.current = (seedWordIndexRef.current + 1) % SEED_WORDS.length;
+      
+      const DATAMUSE_POOL_SIZE = 150; // Fetch a larger pool for 'ml' query
+      const MIN_WORD_LENGTH = 5;
 
-      if (!randomWordStrings || randomWordStrings.length === 0) {
-        console.warn("Random word API returned no words or an unexpected format.");
-        setIsLoadingMore(false);
-        return;
+      console.log(`Fetching words from Datamuse API using seed: '${currentSeedWord}'...`);
+      const datamuseResponse = await fetch(
+        `https://api.datamuse.com/words?ml=${currentSeedWord}&max=${DATAMUSE_POOL_SIZE}`
+      );
+
+      if (!datamuseResponse.ok) {
+        throw new Error(
+          `Failed to fetch words from Datamuse API (seed: ${currentSeedWord}): ${datamuseResponse.status} ${await datamuseResponse.text()}`
+        );
       }
 
-      const newVocabularyItems = await fetchWordDetails(randomWordStrings);
+      const datamuseWordsResult = await datamuseResponse.json();
+
+      if (!datamuseWordsResult || !Array.isArray(datamuseWordsResult) || datamuseWordsResult.length === 0) {
+        console.warn(`Datamuse API returned no words or an unexpected format for seed: '${currentSeedWord}'.`);
+        throw new Error(`Datamuse API returned no words for seed: '${currentSeedWord}'.`);
+      }
+
+      // Filter words: single word, min length, not the seed word
+      const filteredWords: string[] = datamuseWordsResult
+        .map((item: any) => item.word)
+        .filter((word: string) => {
+          if (!word || word.includes(" ") || word.length < MIN_WORD_LENGTH) {
+            return false;
+          }
+          return word.toLowerCase() !== currentSeedWord.toLowerCase();
+        });
+
+      if (filteredWords.length === 0) {
+        console.warn(`No suitable words found after filtering from Datamuse pool (seed: '${currentSeedWord}'). Pool size before filtering: ${datamuseWordsResult.length}`);
+        throw new Error(`No suitable words found after filtering for seed: '${currentSeedWord}'.`);
+      }
+      
+      console.log(`Fetched ${filteredWords.length} suitable words from Datamuse pool (seed: '${currentSeedWord}').`);
+
+      // Randomly select BATCH_SIZE words from the filtered pool
+      const selectedRandomWords: string[] = [];
+      const availableWords = [...filteredWords]; 
+
+      const numWordsToPick = Math.min(BATCH_SIZE, availableWords.length);
+      
+      if (numWordsToPick === 0 && BATCH_SIZE > 0) {
+         throw new Error(`No words available in the filtered pool to select from (seed: '${currentSeedWord}').`);
+      }
+
+      for (let i = 0; i < numWordsToPick; i++) {
+        if (availableWords.length === 0) break; 
+        const randomIndex = Math.floor(Math.random() * availableWords.length);
+        selectedRandomWords.push(availableWords.splice(randomIndex, 1)[0]);
+      }
+
+      if (selectedRandomWords.length === 0 && BATCH_SIZE > 0) { 
+        console.warn(`No words were selected from the Datamuse pool (seed: '${currentSeedWord}'). Filtered pool size: ${filteredWords.length}`);
+        throw new Error(`Failed to select any random words after fetching from Datamuse (seed: '${currentSeedWord}').`);
+      }
+      
+      console.log(`Selected ${selectedRandomWords.length} random words for details (seed: '${currentSeedWord}'):`, selectedRandomWords);
+
+      const newVocabularyItems = await fetchWordDetails(selectedRandomWords);
       
       const existingWordIds = new Set(displayedWords.map(item => item.id));
-      const uniqueNewItems = newVocabularyItems.filter(newItem => 
-        newItem && !existingWordIds.has(newItem.id)
+      const uniqueNewItems = newVocabularyItems.filter(
+        newItem => newItem && !existingWordIds.has(newItem.id)
       );
 
       if (uniqueNewItems.length > 0) {
         setDisplayedWords(prevWords => [...prevWords, ...uniqueNewItems]);
       } else if (newVocabularyItems.length > 0) {
-        console.log("Fetched new words, but they were all duplicates or invalid after definition lookup.");
+        console.log(
+          `Fetched new words (seed: '${currentSeedWord}'), but they were all duplicates or invalid after definition lookup.`
+        );
+      } else if (selectedRandomWords.length > 0) {
+        console.log(`Fetched words (seed: '${currentSeedWord}'), but none had valid definitions or examples from DictionaryAPI.`);
+      } else {
+        console.log(`No words were processed (seed: '${currentSeedWord}', either not selected or BATCH_SIZE was 0).`);
       }
 
     } catch (e) {
-      console.error("Error loading more words:", e);
+      console.error("Error in loadMoreWords (Datamuse with seed words):", e);
       setError(e instanceof Error ? e.message : "An unknown error occurred while fetching new words.");
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, fetchWordDetails, displayedWords]); 
+  }, [isLoadingMore, fetchWordDetails, displayedWords, BATCH_SIZE]); 
 
   useEffect(() => {
     if (displayedWords.length === 0 && !isLoadingMore) { 

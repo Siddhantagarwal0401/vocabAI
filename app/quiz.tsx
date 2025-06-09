@@ -44,6 +44,10 @@ export default function QuizScreen() {
   const [quizActive, setQuizActive] = useState(false);
 
   const nextButtonOpacity = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    console.log('QuizScreen insets.top:', insets.top);
+  }, [insets]);
   const [revealedCorrectChoiceWord, setRevealedCorrectChoiceWord] = useState<string | null>(null);
 
   // State for CustomAlert
@@ -304,13 +308,19 @@ export default function QuizScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={styles.safeArea.backgroundColor} />
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.quizTopArea}>
+      {/* quizTopArea is now a direct child of SafeAreaView */}
+      <View style={[styles.quizTopArea, { marginTop: 50 }]}>
             <Text style={styles.progressText}>
             Word {currentQuestionIndex + 1} / {quizWords.length}
             </Text>
             <Text style={styles.scoreText}>Score: {score}</Text>
-        </View>
+      </View>
+      {/* Main content container */}
+      <View style={styles.container}>
+            {/* <Text style={styles.progressText}>
+            Word {currentQuestionIndex + 1} / {quizWords.length}
+            </Text> */}
+        {/* quizTopArea was moved above styles.container */}
         
         <View style={styles.quizContentArea}> 
             <View style={styles.questionContainer}>
@@ -369,6 +379,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 20,
+    position: 'relative', // Add this to make it a positioning context
   },
   preQuizIcon: {
     marginBottom: 25,
@@ -409,16 +420,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   quizTopArea: {
-    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10, 
-    position: 'absolute', 
-    top: 0, 
-    left: 20, 
-    right: 20, 
-    zIndex: 1, 
+    paddingVertical: 10,
+    paddingHorizontal: 20, // To align content with styles.container
+    width: '100%',         // Span full width
+    // No longer absolute, will be positioned by SafeAreaView
   },
   quizContentArea: { 
     flex: 1, 
