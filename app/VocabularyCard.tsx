@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFavourites } from '../context/FavouritesContext';
 
 export interface VocabularyItem {
@@ -16,6 +16,14 @@ interface VocabularyCardProps {
 }
 
 const { height, width } = Dimensions.get('window');
+const isSmallDevice = width < 375 || height < 700;
+
+// --- Responsive Scaling Utilities ---
+const BASE_WIDTH = 390; // A common base width (e.g., iPhone 12/13/14)
+const scale = (size: number) => (width / BASE_WIDTH) * size;
+// Moderate scale for fonts and UI elements that shouldn't scale too aggressively
+const moderateScale = (size: number, factor = 0.3) => size + (scale(size) - size) * factor;
+// --- End Responsive Scaling Utilities ---
 
 const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
   const { addFavourite, removeFavourite, isFavourite } = useFavourites();
@@ -41,7 +49,7 @@ const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
         <TouchableOpacity onPress={toggleFavourite} style={styles.favouriteButton}>
           <Ionicons 
             name={isFav ? "heart" : "heart-outline"} 
-            size={32} 
+            size={moderateScale(32)} 
             color={isFav ? "#FFA726" : "#FFFFFF"} 
           />
         </TouchableOpacity>
@@ -76,6 +84,7 @@ const VocabularyCard: React.FC<VocabularyCardProps> = ({ item }) => {
 };
 
 const styles = StyleSheet.create({
+  // cardContainer, contentOuterContainer, etc. will be modified below to use moderateScale
   cardContainer: {
     width: width,
     height: height,
@@ -83,28 +92,36 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     backgroundColor: '#121212', 
     position: 'relative',
+    // Added padding to prevent card from appearing too low on small devices
+    paddingBottom: isSmallDevice ? moderateScale(40) : moderateScale(0),
   },
   contentOuterContainer: { 
     width: '90%',
-    maxWidth: 500,
-    height: '70%', 
+    maxWidth: 500, // Keep maxWidth to prevent extreme width on tablets
+    height: isSmallDevice ? '60%' : '70%', // Smaller height on small devices
+    maxHeight: height * 0.75, // Ensure it never exceeds 75% of screen height
     justifyContent: 'flex-start', 
     alignItems: 'center',
-    borderRadius: 20, 
-    paddingVertical: 30, 
-    paddingHorizontal: 20, 
+    borderRadius: moderateScale(20), 
+    paddingTop: moderateScale(2),
+    paddingBottom: moderateScale(20),
+    paddingHorizontal: moderateScale(20), 
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: moderateScale(5) },
     shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowRadius: moderateScale(10),
+    elevation: moderateScale(8, 0.5),
+    // Adjust vertical position based on device size
+    marginTop: isSmallDevice ? moderateScale(-40) : 0,
   },
   wordText: {
-    fontSize: 46, 
-    fontWeight: '600', 
-    textAlign: 'center',
-    marginBottom: 20, 
+    fontFamily: 'System', // Replace with your app's font if you have one
+    fontWeight: 'bold',
+    fontSize: moderateScale(isSmallDevice ? 34 : 38, 0.2), // Smaller base size on small devices
     color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: moderateScale(15),
+    paddingHorizontal: moderateScale(10), // Added padding for very long words that scale down
   },
   scrollableContentContainer: {
     width: '100%', 
@@ -114,31 +131,31 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center', 
     alignItems: 'center', 
-    paddingBottom: 20,
+    paddingBottom: moderateScale(20), // Ensures content doesn't stick to the very bottom if scrollable
   },
   definitionText: {
-    fontSize: 20,
+    fontSize: moderateScale(20), 
     textAlign: 'center',
-    marginTop: 20, 
-    marginBottom: 20, 
+    marginTop: moderateScale(20), 
+    marginBottom: moderateScale(20), 
     color: '#E0E0E0',
     fontStyle: 'normal',
-    lineHeight: 30,
+    lineHeight: moderateScale(30),
   },
   exampleText: {
-    fontSize: 18,
+    fontSize: moderateScale(18), 
     textAlign: 'center',
-    marginTop: 15, 
+    marginTop: moderateScale(15), 
     color: '#C0C0C0',
-    lineHeight: 28,
+    lineHeight: moderateScale(28),
     fontStyle: 'italic',
   },
   favouriteButton: {
     position: 'absolute',
-    top: 25, 
-    right: 25, 
-    zIndex: 1, 
-    padding: 10, 
+    top: moderateScale(15),
+    right: moderateScale(15),
+    zIndex: 1,
+    padding: moderateScale(8), // Added padding for easier touch
   },
 });
 
